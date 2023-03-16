@@ -1,0 +1,10 @@
+node_modules
+.DS_Store
+dist
+dist-ssr
+*.local
+twin.d.ts
+index.html
+postcss.config.js
+tailwind.config.js
+node_modules/*
