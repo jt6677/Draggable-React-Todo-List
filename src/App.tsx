@@ -10,7 +10,6 @@ import { DraggableTodo } from './component/toDoList'
 import { FlatTodo, TodoType } from './types'
 import { flattenTodos, rehydrateTodos } from './utils'
 
-
 const dummyData = [
   { id: 1678981940132, text: '1', completed: false },
   { id: 1678981944941, text: '2', completed: false },
@@ -97,6 +96,7 @@ const App: FC = () => {
           ))}
         </div>
       </div>
+      <span>enter to make new to-do, ctl + enter to add subtask</span>
     </DndProvider>
   )
 }
