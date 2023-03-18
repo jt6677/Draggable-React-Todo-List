@@ -1,0 +1,103 @@
+import { AuthError, AuthResponse, OAuthResponse, User } from '@supabase/supabase-js'
+import React, { useEffect, useState } from 'react'
+
+import supabase from '~/lib/supabase'
+import { createCtx } from '~/utils'
+
+type AuthContextProps = {
+  // authorization: string
+  user: User | null
+  isLoading: boolean
+  signOut: () => any
+  signInWithEmail: ({
+    email,
+    password,
+  }: {
+    email: string
+    password: string
+  }) => Promise<AuthResponse>
+  signInWithGoogle: () => Promise<OAuthResponse>
+}
+
+// create a context for authentication
+export const [useAuth, CtxProvider] = createCtx<AuthContextProps>()
+
+export function AuthProvider(props: React.PropsWithChildren<any>): JSX.Element {
+  // create state values for user data and loading
+  const [user, setUser] = useState<User | null>(null)
+  // const [authorization, setAuthorization] = useState('')
+  const [error, setError] = useState<AuthError | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    // get session data if there is an active session
+    ;(async () => {
+      const { data, error } = await supabase.auth.getSession()
+      if (data && data.session?.user) {
+        setUser(data.session?.user ?? null)
+        // setAuthorization(data.session?.access_token ?? '')
+        setIsLoading(false)
+      }
+      if (data.session?.user === null || error) {
+        setUser(null)
+      }
+      setIsLoading(false)
+    })()
+
+    // listen for changes to auth
+    const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        const newPassword = prompt('What would you like your new password to be?')
+        if (newPassword) {
+          const { data, error } = await supabase.auth.updateUser({ password: newPassword })
+          if (data) alert('Password updated successfully!')
+          if (error) alert('There was an error updating your password.')
+        }
+      }
+      if (event === 'SIGNED_IN' && session?.user) {
+        setUser(session.user)
+        setIsLoading(false)
+      }
+      if (event === 'SIGNED_OUT') {
+        setUser(null)
+        setIsLoading(false)
+      }
+    })
+
+    // cleanup the useEffect hook
+    return () => {
+      listener?.subscription.unsubscribe()
+    }
+  }, [])
+
+  const signOut = () => supabase.auth.signOut()
+  const signInWithGoogle = () =>
+    supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
+      },
+    })
+  const signInWithEmail = ({ email, password }: { email: string; password: string }) =>
+    supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+
+  return (
+    <CtxProvider
+      value={{
+        user,
+        // authorization,
+        signOut,
+        isLoading,
+        signInWithGoogle,
+        signInWithEmail,
+      }}
+      {...props}
+    />
+  )
+}
